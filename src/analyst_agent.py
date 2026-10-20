@@ -11,6 +11,7 @@ from skillab import get_llm
 from skillab.llm.base import LLMProvider
 from skillab.prompts import PromptRegistry
 from skillab.tools import ToolWrapper
+from memory import PersistentMemory
 
 from state import AnalystState, QueryStep, ToolStep, StepResult
 from nl2sql_agent import NL2SQLAgent
@@ -37,12 +38,18 @@ class AnalystAgent:
     def __init__(
         self,
         tables_config: dict[str, dict],
+        memory: PersistentMemory,
+        llm_caching_enabled: bool = False,
+        llm_caching_context: str = "",
         db_url: str = "postgresql+psycopg2://demo:demo123@localhost:5433/rag_demo",
         llm: LLMProvider | None = None,
     ):
         self.db_url = db_url
         self.llm = llm or get_llm()
+        self.llm_caching_enabled = llm_caching_enabled
+        self.llm_caching_context = llm_caching_context
         self.prompts = PromptRegistry(str(PROMPTS_DIR))
+        self.memory = memory
 
         # Load table info + create NL2SQL agents
         self.tables_info = []
@@ -60,12 +67,22 @@ class AnalystAgent:
                 schema_path=config["schema_path"],
                 db_url=db_url,
                 llm=self.llm,
+                llm_caching_enabled=llm_caching_enabled,
+                llm_caching_context=llm_caching_context,
             )
 
         # Tool catalog pentru prompt
         self.tools_catalog = ToolWrapper.to_prompt_string()
 
         self.graph = self._build_graph()
+
+    def _build_messages(self, user_prompt: str) -> list[dict]:
+        """Build messages list with optional caching context."""
+        messages = []
+        if self.llm_caching_enabled and self.llm_caching_context:
+            messages.append({"role": "system", "content": self.llm_caching_context})
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
 
     # === NODES ===
 
@@ -79,10 +96,10 @@ class AnalystAgent:
                 tables= self.tables_info,
                 tools_catalog= self.tools_catalog,
                 question= state.question,
-                history= []
+                history= state.messages
             )
-
-            response = self.llm.generate_sync([{"role": "user", "content":prompt}])
+            messages = self._build_messages(prompt)
+            response = self.llm.generate_sync(messages, cache_system=self.llm_caching_enabled)
             if not isinstance(response, str):
                 response = str(response)
 
@@ -369,7 +386,8 @@ class AnalystAgent:
                 final_data= final_data
             )
 
-            answer = self.llm.generate_sync([{"role": "user", "content":prompt}])
+            messages = self._build_messages(prompt)
+            answer = self.llm.generate_sync(messages, cache_system=self.llm_caching_enabled)
 
             if not isinstance(answer, str):
                 answer = str(answer)
@@ -423,7 +441,18 @@ class AnalystAgent:
 
         return graph.compile()
 
-    def chat(self, question: str) -> AnalystState:
+    def chat(self, question: str, session_id: str) -> AnalystState:
         """Execută agentul."""
-        initial = AnalystState(question=question)
-        return self.graph.invoke(initial)
+        
+        # 1. LOAD — istoricul din DB (ultimele N mesaje)
+        history = self.memory.load_messages(session_id)
+        
+        # 2. INVOKE — prompt | llm cu istoricul injectat
+        initial = AnalystState(question=question, messages=history)
+        reply = self.graph.invoke(initial)
+        
+        # 3. SAVE — persistăm ambele mesaje (×2), fiecare în tranzacția lui
+        self.memory.save_message(session_id, "user", question)
+        self.memory.save_message(session_id, "assistant", reply)
+
+        return reply

@@ -21,6 +21,7 @@ from skillab.prompts import PromptRegistry
 
 from state import OrchestratorState, OrchestratorFeedback
 from rag_agent import RAGAgent, RAGAgentConfig
+from cache import SmartCache
 
 logger = logging.getLogger(__name__)
 
@@ -45,18 +46,36 @@ class Orchestrator:
 
     def __init__(
         self,
+        cache: SmartCache,
         config: OrchestratorConfig | None = None,
         llm: LLMProvider | None = None,
+        llm_caching_enabled: bool = False,
+        llm_caching_context: str = "",
     ):
         self.config = config or OrchestratorConfig()
         self.llm = llm or get_llm()
+        self.llm_caching_enabled = llm_caching_enabled
+        self.llm_caching_context = llm_caching_context
         self.prompts = PromptRegistry(str(PROMPTS_DIR))
 
         # RAG Agent - graf separat
         rag_config = RAGAgentConfig()
         rag_config.default_threshold = self.config.min_score
-        self.rag = RAGAgent(self.llm, rag_config)
+        self.rag = RAGAgent(
+            self.llm, 
+            rag_config,
+            cache,
+            llm_caching_enabled=llm_caching_enabled,
+            llm_caching_context=llm_caching_context,)
 
+    def _build_messages(self, user_prompt: str) -> list[dict]:
+        """Build messages list with optional caching context."""
+        messages = []
+        if self.llm_caching_enabled and self.llm_caching_context:
+            messages.append({"role": "system", "content": self.llm_caching_context})
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
+    
     # === NODES ===
 
     def node_call_rag(self, state: OrchestratorState) -> dict:
@@ -98,9 +117,8 @@ class Orchestrator:
         )
 
         # 3. Apelăm LLM-ul.
-        response = self.llm.generate_sync([
-            {"role": "user", "content": prompt}
-        ])
+        messages = self._build_messages(prompt)
+        response = self.llm.generate_sync(messages, cache_system=self.llm_caching_enabled)
 
         # 4. Extragem răspunsul text.
         if isinstance(response, str):
@@ -162,9 +180,8 @@ class Orchestrator:
         )
 
         # 3. Apelăm LLM-ul.
-        response = self.llm.generate_sync([
-            {"role": "user", "content": prompt}
-        ])
+        messages = self._build_messages(prompt)
+        response = self.llm.generate_sync(messages, cache_system=self.llm_caching_enabled)
 
         # 4. Extragem răspunsul text.
         if isinstance(response, str):

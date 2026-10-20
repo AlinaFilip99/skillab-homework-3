@@ -1,12 +1,12 @@
 """
 Repository Pattern - Data Access Layer
 """
-from typing import Any
+from datetime import datetime, timedelta
 
-from sqlalchemy import func, text
+from sqlalchemy import func, text, select
 from sqlalchemy.orm import Session
 
-from models import DocumentChunk, AchizitieDirecta, AnuntInitiere, EMBEDDING_DIM
+from models import DocumentChunk, AchizitieDirecta, AnuntInitiere, ChatMessage
 
 
 class DocumentChunkRepository:
@@ -140,3 +140,26 @@ class AnuntRepository:
 
     def delete_all(self) -> int:
         return self.session.query(AnuntInitiere).delete()
+
+class ChatMessageRepository:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def add(self, session_id: str, role: str, content: str) -> ChatMessage:
+        msg = ChatMessage(session_id=session_id, role=role, content=content)
+        self.db.add(msg)
+        return msg
+
+    def latest(self, session_id: str, limit: int) -> list[ChatMessage]:
+        # ORDER BY timestamp DESC + LIMIT N  → ultimele N (window)
+        stmt = (
+            select(ChatMessage)
+            .where(ChatMessage.session_id == session_id)
+            # id ca tiebreaker: mesajele scrise în aceeași secundă au timestamp
+            # identic, iar id-ul auto-increment garantează ordinea reală.
+            .order_by(ChatMessage.timestamp.desc(), ChatMessage.id.desc())
+            .limit(limit)
+        )
+        rows = self.db.execute(stmt).scalars().all()
+        return list(reversed(rows))      # reverse → cronologic pentru LLM
+

@@ -142,3 +142,5 @@ class AnalystState(BaseModel):
     step_results: list[StepResult] = Field(default_factory=list)   # pentru logging
     answer: str = ""
     status: Literal["pending", "success", "failed", "no_plan"] = "pending"
+
+    messages: list[dict] = []

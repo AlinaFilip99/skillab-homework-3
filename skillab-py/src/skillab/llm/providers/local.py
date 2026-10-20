@@ -89,7 +89,7 @@ class LocalProvider(LLMProvider):
             for msg in messages
         ]
 
-    async def generate(self, messages: list[Message]) -> str:
+    async def generate(self, messages: list[Message], cache_system: bool = False) -> str:
         """Generate complete response."""
         client = self._get_client()
         msgs = self._prepare_messages(messages)
@@ -104,7 +104,7 @@ class LocalProvider(LLMProvider):
 
         return response.choices[0].message.content
 
-    async def stream(self, messages: list[Message]) -> AsyncIterator[str]:
+    async def stream(self, messages: list[Message], cache_system: bool = False) -> AsyncIterator[str]:
         """Stream response chunks."""
         client = self._get_client()
         msgs = self._prepare_messages(messages)

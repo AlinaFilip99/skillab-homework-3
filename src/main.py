@@ -1,121 +1,75 @@
-"""
-Main - Test agenții
-"""
+"""Entry point simplu pentru chatul SEAP."""
 import logging
 import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "skillab-py" / "src"))
-sys.path.insert(0, str(Path(__file__).parent))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT.parent / "skillab-py" / "src"))
 
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(ROOT / ".env")
 
 from skillab import get_llm
-from state import OrchestratorState
 from orchestrator import Orchestrator
+from analyst_agent import AnalystAgent
+from router import Router
+from chat import Chat
 
-# Citește config LLM din .env
-LLM_PROVIDER = os.getenv("LLM_PROVIDER")
-
-# Alias-uri pentru provideri (gemini -> google, ollama -> local)
-_PROVIDER_ALIASES = {
-    "gemini": "google",
-    "ollama": "local",
-}
-
-# Mapping provider -> env var pentru model
-_MODEL_ENV_VARS = {
+# Păstrează alias-urile și variabilele de mediu din exemplul existent.
+ALIASES = {"gemini": "google", "ollama": "local"}
+MODEL_ENV = {
     "google": "GOOGLE_MODEL",
     "anthropic": "ANTHROPIC_MODEL",
     "openai": "OPENAI_MODEL",
     "local": "OLLAMA_MODEL",
 }
 
-def _resolve_provider(provider: str | None) -> str | None:
-    """Rezolvă alias-uri (gemini -> google)."""
-    if not provider:
-        return None
-    return _PROVIDER_ALIASES.get(provider.lower(), provider.lower())
 
-def _get_model_from_env(provider: str | None) -> str | None:
-    """Citește model din env var specific provider-ului."""
-    resolved = _resolve_provider(provider)
-    if not resolved:
-        return None
-    env_var = _MODEL_ENV_VARS.get(resolved, f"{resolved.upper()}_MODEL")
-    return os.getenv("LLM_MODEL") or os.getenv(env_var)
-
-# Rezolvă provider și model
-LLM_PROVIDER = _resolve_provider(os.getenv("LLM_PROVIDER"))
-LLM_MODEL = _get_model_from_env(os.getenv("LLM_PROVIDER"))
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(message)s",
-    datefmt="%H:%M:%S"
-)
+def make_llm():
+    provider = os.getenv("LLM_PROVIDER")
+    provider = ALIASES.get(provider.lower(), provider.lower()) if provider else None
+    model_env = MODEL_ENV.get(provider, f"{provider.upper()}_MODEL") if provider else None
+    model = os.getenv("LLM_MODEL") or (os.getenv(model_env) if model_env else None)
+    return get_llm(provider=provider, model=model)
 
 
-def test_orchestrator():
-    """Test Orchestrator + RAG."""
-    print("\n" + "=" * 50)
-    print("TEST: Orchestrator + RAG")
-    print("=" * 50)
-
-    # Creează LLM explicit din config
-    llm = get_llm(provider=LLM_PROVIDER, model=LLM_MODEL)
-    print(f"Using LLM: {LLM_PROVIDER} / {llm.model}")
-
-    orch = Orchestrator(llm=llm)
-    app = orch.build_graph()
-
-    queries = [
-        "Care e totalul facturilor TechSoft?",
-        "Ce contact are DataPro?",
-    ]
-
-    for query in queries:
-        print(f"\nQuery: {query}")
-        result = app.invoke(OrchestratorState(query=query))
-        print(f"Status: {result['status']}")
-        print(f"Answer: {result['answer'][:200]}...")
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 
 
-def test_analyst():
-    """Test Analyst + NL2SQL."""
-    print("\n" + "=" * 50)
-    print("TEST: Analyst + NL2SQL")
-    print("=" * 50)
+    from cache import SmartCache
+    llm = make_llm()
+    cache = SmartCache()
+    orchestrator = Orchestrator(llm=llm, cache=cache)
 
-    from analyst_agent import AnalystAgent
-
-    # Creează LLM explicit din config
-    llm = get_llm(provider=LLM_PROVIDER, model=LLM_MODEL)
-    print(f"Using LLM: {LLM_PROVIDER} / {llm.model}")
-
-    DATA_DIR = Path(__file__).parent.parent / "data"
-
-    analyst = AnalystAgent(
-        tables_config={
-            "achizitii_directe": {
-                "schema_path": str(DATA_DIR / "nl2sql_agent" / "schema_achizitii_directe.json"),
-                "business_path": str(DATA_DIR / "nl2sql_agent" / "business_achizitii_directe.json"),
-            },
-            "anunturi_initiere": {
-                "schema_path": str(DATA_DIR / "nl2sql_agent" / "schema_anunturi_initiere.json"),
-                "business_path": str(DATA_DIR / "nl2sql_agent" / "business_anunturi_initiere.json"),
-            },
+    data_dir = ROOT / "data" / "nl2sql_agent"
+    tables_config = {
+        "achizitii_directe": {
+            "schema_path": str(data_dir / "schema_achizitii_directe.json"),
+            "business_path": str(data_dir / "business_achizitii_directe.json"),
         },
-        llm=llm,
-    )
+        "anunturi_initiere": {
+            "schema_path": str(data_dir / "schema_anunturi_initiere.json"),
+            "business_path": str(data_dir / "business_anunturi_initiere.json"),
+        },
+    }
 
-    result = analyst.chat("Care sunt top 5 furnizori după valoare?")
-    print(f"Status: {result['status']}")
-    print(f"Answer: {result['answer'][:200]}...")
+    # IMPORTANT: actualul analyst_agent.py atașat cere și PersistentMemory.
+    # Configurează memory conform implementării existente în proiectul tău.
+    from memory import PersistentMemory
+    memory = PersistentMemory()
+    analyst = AnalystAgent(tables_config=tables_config, memory=memory, llm=llm)
+
+    router = Router(
+        orchestrator=orchestrator,
+        analyst=analyst,
+        llm=llm
+    )
+    chat = Chat(router)
+    chat.run()
 
 
 if __name__ == "__main__":
-    test_orchestrator()
-    # test_analyst()  # uncomment după ce ai schema JSON
+    main()

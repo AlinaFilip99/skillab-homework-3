@@ -85,7 +85,7 @@ class GoogleProvider(LLMProvider):
 
         return contents
 
-    async def generate(self, messages: list[Message]) -> str:
+    async def generate(self, messages: list[Message], cache_system: bool = False) -> str:
         """Generate complete response."""
         client = self._get_client()
         contents = self._prepare_messages(messages)
@@ -100,7 +100,7 @@ class GoogleProvider(LLMProvider):
 
         return response.text
 
-    async def stream(self, messages: list[Message]) -> AsyncIterator[str]:
+    async def stream(self, messages: list[Message], cache_system: bool = False) -> AsyncIterator[str]:
         """Stream response chunks."""
         client = self._get_client()
         contents = self._prepare_messages(messages)

@@ -38,17 +38,29 @@ class NL2SQLAgent:
         db_url: str = "postgresql+psycopg2://demo:demo123@localhost:5433/rag_demo",
         max_retries: int = 2,
         llm: LLMProvider | None = None,
+        llm_caching_enabled: bool = False,
+        llm_caching_context: str = "",
     ):
         self.table_name = table_name
         self.db_url = db_url
         self.max_retries = max_retries
         self.llm = llm or get_llm()
+        self.llm_caching_enabled = llm_caching_enabled
+        self.llm_caching_context = llm_caching_context
         self.prompts = PromptRegistry(str(PROMPTS_DIR))
 
         # Load schema
         self.schema = json.loads(Path(schema_path).read_text())
 
         self.graph = self._build_graph()
+
+    def _build_messages(self, user_prompt: str) -> list[dict]:
+        """Build messages list with optional caching context."""
+        messages = []
+        if self.llm_caching_enabled and self.llm_caching_context:
+            messages.append({"role": "system", "content": self.llm_caching_context})
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
 
     # === NODES ===
 
@@ -76,7 +88,8 @@ class NL2SQLAgent:
         )
 
         # 2. Apelează LLM
-        response = self.llm.generate_sync([{"role": "user", "content":prompt}])
+        messages = self._build_messages(prompt)
+        response = self.llm.generate_sync(messages, cache_system=self.llm_caching_enabled)
         sql_text = response.text if hasattr(response, "text") else str(response)
 
         # 3. Curăță răspunsul (elimină blocurile ```sql ... ```)
@@ -161,7 +174,8 @@ class NL2SQLAgent:
         )
 
         # 4. Apelează LLM pentru SQL corectat
-        response = self.llm.generate_sync([{"role": "user", "content":prompt}])
+        messages = self._build_messages(prompt)
+        response = self.llm.generate_sync(messages, cache_system=self.llm_caching_enabled)
         sql_text = response.text if hasattr(response, "text") else str(response)
 
         # Curăță răspunsul

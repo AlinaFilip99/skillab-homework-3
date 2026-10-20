@@ -15,6 +15,7 @@ from pathlib import Path
 from langgraph.graph import StateGraph, START, END
 from skillab.llm.base import LLMProvider
 from skillab.prompts import PromptRegistry
+from cache import SmartCache
 
 from state import (
     RAGAgentState,
@@ -47,13 +48,27 @@ class RAGAgent:
     def __init__(
         self,
         llm: LLMProvider,
+        cache: SmartCache,
         config: RAGAgentConfig | None = None,
+        llm_caching_enabled: bool = False,
+        llm_caching_context: str = "",
     ):
         self.llm = llm
+        self.cache = cache
+        self.llm_caching_enabled = llm_caching_enabled
+        self.llm_caching_context = llm_caching_context
         self.config = config or RAGAgentConfig()
         self.prompts = PromptRegistry(str(PROMPTS_DIR))
         self.graph = self._build_graph()
 
+    def _build_messages(self, user_prompt: str) -> list[dict]:
+        """Build messages list with optional caching context."""
+        messages = []
+        if self.llm_caching_enabled and self.llm_caching_context:
+            messages.append({"role": "system", "content": self.llm_caching_context})
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
+    
     # === NODES ===
 
     def node_refine(self, state: RAGAgentState) -> dict:
@@ -108,9 +123,8 @@ class RAGAgent:
         )
 
         # 4. Apelăm LLM-ul.
-        response = self.llm.generate_sync([
-            {"role": "user", "content": prompt}
-        ])
+        messages = self._build_messages(prompt)
+        response = self.llm.generate_sync(messages, cache_system=self.llm_caching_enabled)
 
         # Acceptăm atât un răspuns text, cât și un obiect cu atributul content.
         response_text = (
@@ -150,6 +164,14 @@ class RAGAgent:
 
         logger.info(f"[SEARCH] '{query}' (top_k={self.config.top_k}, threshold={threshold})")
 
+        # 1. CHECK CACHE — întrebare similară deja răspunsă?
+        cached = self.cache.get(query)
+        if cached is not None:
+            return {
+                "result": json.loads(cached)
+                }                        # HIT · $0 · ~10ms
+        
+        # 2. CALL LLM — doar la MISS
         with transaction() as db:
             rag = RAGService(db)
             results = rag.search(query, top_k=self.config.top_k, threshold=threshold)
@@ -170,13 +192,18 @@ class RAGAgent:
         max_score = max(scores) if scores else 0.0
         avg_score = sum(scores) / len(scores) if scores else 0.0
 
+        result = RAGSearchResult(
+            query_used=query,
+            results=items,
+            max_score=max_score,
+            avg_score=avg_score,
+        )
+
+        # 3. SAVE CACHE — pentru viitoare query-uri similare
+        self.cache.set(query, json.dumps(result))
+        
         return {
-            "result": RAGSearchResult(
-                query_used=query,
-                results=items,
-                max_score=max_score,
-                avg_score=avg_score,
-            )
+            "result": result
         }
 
     # === GRAPH ===

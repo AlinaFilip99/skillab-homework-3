@@ -49,12 +49,12 @@ class LLMProvider(ABC):
         pass
 
     @abstractmethod
-    async def generate(self, messages: list[Message]) -> str:
+    async def generate(self, messages: list[Message], cache_system: bool = False) -> str:
         """Generate a complete response (async)."""
         pass
 
     @abstractmethod
-    async def stream(self, messages: list[Message]) -> AsyncIterator[str]:
+    async def stream(self, messages: list[Message], cache_system: bool = False) -> AsyncIterator[str]:
         """Stream response chunks (async generator)."""
         pass
 
@@ -70,10 +70,10 @@ class LLMProvider(ABC):
                 cls._sync_loop = asyncio.new_event_loop()
             return cls._sync_loop
 
-    def generate_sync(self, messages: list[Message]) -> str:
+    def generate_sync(self, messages: list[Message], cache_system: bool = False) -> str:
         """Synchronous generate - runs async in reusable event loop."""
         loop = self._get_sync_loop()
-        return loop.run_until_complete(self.generate(messages))
+        return loop.run_until_complete(self.generate(messages, cache_system))
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(model={self.model!r})"

@@ -50,7 +50,7 @@ class AnthropicProvider(LLMProvider):
                     raise ImportError("anthropic package required. Install: pip install anthropic")
         return self._client
 
-    def _prepare_messages(self, messages: list[Message]) -> tuple[str, list[dict]]:
+    def _prepare_messages(self, messages: list[Message], cache_system: bool = False,) -> tuple[str, list[dict]]:
         """
         Extract system message and format remaining messages.
 
@@ -61,24 +61,34 @@ class AnthropicProvider(LLMProvider):
         Returns:
             (system_text, formatted_messages)
         """
-        system = ""
+        system_text = ""
         formatted = []
-
+        
         for msg in messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-
-            if role == "system":
-                system = content
+            if msg.get("role") == "system":
+                system_text = msg.get("content", "")
             else:
-                formatted.append({"role": role, "content": content})
-
+                formatted.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                })
+        
+        # Format system pentru caching
+        if cache_system and system_text:
+            system = [{
+                "type": "text",
+                "text": system_text,
+                "cache_control": {"type": "ephemeral"},
+            }]
+        else:
+            system = system_text
+        
         return system, formatted
 
-    async def generate(self, messages: list[Message]) -> str:
+    async def generate(self, messages: list[Message], cache_system: bool = False) -> str:
         """Generate complete response."""
         client = self._get_client()
-        system, msgs = self._prepare_messages(messages)
+        system, msgs = self._prepare_messages(messages, cache_system)
 
         logger.debug(f"Anthropic generate: {len(msgs)} messages, system={bool(system)}")
 
@@ -92,10 +102,10 @@ class AnthropicProvider(LLMProvider):
 
         return response.content[0].text
 
-    async def stream(self, messages: list[Message]) -> AsyncIterator[str]:
+    async def stream(self, messages: list[Message], cache_system: bool = False) -> AsyncIterator[str]:
         """Stream response chunks."""
         client = self._get_client()
-        system, msgs = self._prepare_messages(messages)
+        system, msgs = self._prepare_messages(messages, cache_system)
 
         logger.debug(f"Anthropic stream: {len(msgs)} messages, system={bool(system)}")
 
