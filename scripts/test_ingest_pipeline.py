@@ -3,6 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
+from src.guardrails import ContentFilter, FilterResult
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -26,6 +27,12 @@ def main():
     path = Path(FILE_PATH)
     if not path.exists():
         logger.error(f"File not found: {path}")
+        return 1
+    
+    # input file validation
+    result = ContentFilter().filter(path)
+    if result.status.value != FilterResult.PASSED:
+        logger.error(f"File rejected because: {result.reason}")
         return 1
 
     extract_schema = None
