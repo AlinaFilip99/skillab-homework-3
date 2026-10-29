@@ -15,9 +15,11 @@ sentence-transformers
 # LLM (unul din acestea)
 openai
 google-generativeai
+google-genai
 
 # Utils
 python-dotenv
 tqdm
 pydantic>=2.0
 langgraph
+sqlparse

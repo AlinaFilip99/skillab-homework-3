@@ -1,0 +1,71 @@
+SPECIFICATIE TEHNICA - Document de Test
+========================================
+
+1. INTRODUCERE
+--------------
+Acest document este utilizat pentru testarea pipeline-ului de ingestie.
+Contine text structurat pe mai multe sectiuni pentru a verifica:
+- Incarcarea corecta a fisierelor text
+- Preprocesarea continutului
+- Impartirea in chunk-uri
+- Stocarea in baza de date cu embeddings
+
+2. CERINTE FUNCTIONALE
+----------------------
+
+2.1 Autentificare
+Sistemul trebuie sa suporte autentificare cu username si parola.
+Parolele trebuie stocate criptat folosind bcrypt sau similar.
+Sesiunile active trebuie sa expire dupa 30 de minute de inactivitate.
+
+2.2 Gestionare Documente
+Utilizatorii pot incarca documente in formate: PDF, TXT, DOCX.
+Dimensiunea maxima per fisier: 50MB.
+Documentele sunt procesate asincron pentru extragerea textului.
+
+2.3 Cautare Semantica
+Sistemul permite cautarea semantica in documentele incarcate.
+Rezultatele sunt ordonate dupa scorul de similaritate.
+Sunt returnate maxim 10 rezultate per query.
+
+3. CERINTE NON-FUNCTIONALE
+--------------------------
+
+3.1 Performanta
+- Timp de raspuns pentru cautare: < 500ms
+- Capacitate: minim 10.000 documente simultane
+- Uptime: 99.9%
+
+3.2 Securitate
+- Criptare in tranzit: TLS 1.3
+- Criptare in repaus: AES-256
+- Audit logging pentru toate operatiunile
+
+4. TERMENI SI CONDITII
+----------------------
+
+4.1 Livrare
+Livrarea se face in termen de 30 de zile de la semnarea contractului.
+Fiecare etapa este supusa aprobarii clientului.
+
+4.2 Plata
+Plata se efectueaza in 3 transe:
+- 30% la semnarea contractului
+- 40% la livrarea MVP
+- 30% la acceptanta finala
+
+4.3 Garantie
+Se acorda garantie de 12 luni pentru defecte software.
+Suportul tehnic este inclus in perioada de garantie.
+
+5. ANEXE
+--------
+A. Diagrama arhitectura sistem
+B. Model date
+C. API Reference
+D. Glossar termeni tehnici
+
+---
+Document generat automat pentru testare.
+Versiune: 1.0
+Data: 2024-01-15

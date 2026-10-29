@@ -1,0 +1,33 @@
+{
+  "table_name": "anunturi_initiere",
+  "description": "Anunțuri de inițiere a procedurilor de achiziție publică din România (Q2 2018). Licitații și proceduri competitive pentru contracte peste pragul de achiziție directă.",
+  "columns": {
+    "id": {"type": "INTEGER", "description": "Identificator unic"},
+    "tip_anunt": {"type": "VARCHAR(200)", "description": "Tipul anunțului (Anunt de participare, Invitatie de participare)"},
+    "numar_anunt_invitatie": {"type": "VARCHAR(50)", "description": "Numărul anunțului în SEAP (ex: SCN1000001)"},
+    "data_publicare": {"type": "TIMESTAMP", "description": "Data publicării anunțului"},
+    "denumire_ac": {"type": "VARCHAR(500)", "description": "Denumirea autorității contractante"},
+    "cui": {"type": "VARCHAR(50)", "description": "CUI-ul autorității contractante"},
+    "judet": {"type": "VARCHAR(100)", "description": "Județul autorității (București, Cluj, etc.)"},
+    "tip_contract": {"type": "VARCHAR(100)", "description": "Categoria: Lucrari, Servicii, Furnizare"},
+    "utilitati": {"type": "VARCHAR(10)", "description": "Sector utilități publice (DA/NU)"},
+    "tip_procedura": {"type": "VARCHAR(200)", "description": "Procedura simplificata, Licitatie deschisa, etc."},
+    "criteriu_atribuire": {"type": "VARCHAR(200)", "description": "Pretul cel mai scazut / Cel mai bun raport calitate-pret"},
+    "valoare_estimata": {"type": "DECIMAL(18,2)", "description": "Valoarea estimată (buget)"},
+    "moneda": {"type": "VARCHAR(10)", "description": "Moneda (RON, EUR)"},
+    "modalitate_desfasurare": {"type": "VARCHAR(100)", "description": "Online (SEAP) sau Offline"},
+    "trimis_ojeu": {"type": "VARCHAR(10)", "description": "Trimis la Jurnalul Oficial UE (DA/NU)"},
+    "fonduri_comunitare": {"type": "VARCHAR(10)", "description": "Finanțat din fonduri europene (DA/NU)"},
+    "main_cpv_code": {"type": "VARCHAR(50)", "description": "Codul CPV principal"},
+    "main_cpv_name": {"type": "TEXT", "description": "Denumirea codului CPV"}
+  },
+  "business_rules": {
+    "licitatie_mare": "valoare_estimata > 1.000.000",
+    "licitatie_mica": "valoare_estimata < 100.000",
+    "fonduri_ue": "fonduri_comunitare = 'DA'",
+    "lucrari": "tip_contract = 'Lucrari'",
+    "servicii": "tip_contract = 'Servicii'",
+    "furnizare": "tip_contract = 'Furnizare'",
+    "online": "modalitate_desfasurare ILIKE '%online%'"
+  }
+}

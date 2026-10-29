@@ -17,8 +17,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from skillab import get_llm
-from database import transaction
-from rag_service import RAGService
+from src.db.database import transaction
+from src.rag.service import RAGService
 
 DOCS_DIR = Path(__file__).parent.parent / "data" / "documents"
 

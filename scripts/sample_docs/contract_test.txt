@@ -1,0 +1,49 @@
+CONTRACT DE PRESTĂRI SERVICII
+Nr. CS-2024-00456
+
+Încheiat astăzi, 01.02.2024, între:
+
+1. PRESTATOR:
+SC Digital Services SRL
+CUI: RO11223344
+Sediul: Str. Victoriei nr. 78, Timișoara
+Reprezentat prin: Ion Popescu - Director General
+
+2. BENEFICIAR:
+SC Business Solutions SRL
+CUI: RO55667788
+Sediul: Bd. Republicii nr. 25, Iași
+Reprezentat prin: Maria Ionescu - Administrator
+
+Art. 1. OBIECTUL CONTRACTULUI
+Prestatorul se obligă să furnizeze servicii de dezvoltare software și mentenanță
+pentru sistemul de gestiune al Beneficiarului.
+
+Art. 2. VALOAREA CONTRACTULUI
+Valoarea totală a contractului este de 150000.00 RON (o sută cincizeci de mii lei),
+la care se adaugă TVA.
+
+Art. 3. DURATA CONTRACTULUI
+Prezentul contract se încheie pe o perioadă de 12 luni, începând cu data semnării.
+
+Art. 4. OBLIGAȚIILE PRESTATORULUI
+Prestatorul se obligă să:
+- Dezvolte modulele software conform specificațiilor tehnice
+- Asigure mentenanța sistemului în termenul contractual
+- Furnizeze suport tehnic 24/7 pentru probleme critice
+- Livreze documentația tehnică completă
+- Realizeze training pentru utilizatori
+
+Art. 5. OBLIGAȚIILE BENEFICIARULUI
+Beneficiarul se obligă să:
+- Efectueze plățile conform graficului stabilit
+- Furnizeze acces la infrastructura necesară
+- Desemneze o persoană de contact
+
+Art. 6. DISPOZIȚII FINALE
+Prezentul contract a fost încheiat în 2 (două) exemplare originale, câte unul
+pentru fiecare parte.
+
+PRESTATOR                          BENEFICIAR
+SC Digital Services SRL            SC Business Solutions SRL
+_____________________              _____________________

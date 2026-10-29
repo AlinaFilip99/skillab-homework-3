@@ -14,7 +14,7 @@ import pandas as pd
 from datetime import datetime
 from sqlalchemy import text
 from tqdm import tqdm
-from database import engine
+from src.db.database import engine
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "documents-sql"
 

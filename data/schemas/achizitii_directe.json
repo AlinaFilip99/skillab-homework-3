@@ -1,0 +1,38 @@
+{
+  "table_name": "achizitii_directe",
+  "description": "Achiziții publice directe din România (Q2 2018). Contracte sub pragul de licitație, atribuite direct fără procedură competitivă.",
+  "columns": {
+    "id": {"type": "INTEGER", "description": "Identificator unic"},
+    "castigator": {"type": "VARCHAR(500)", "description": "Numele firmei câștigătoare (furnizor)"},
+    "castigator_cui": {"type": "VARCHAR(50)", "description": "CUI-ul furnizorului (poate conține prefix RO)"},
+    "castigator_tara": {"type": "VARCHAR(100)", "description": "Țara furnizorului"},
+    "castigator_localitate": {"type": "VARCHAR(200)", "description": "Localitatea furnizorului"},
+    "castigator_adresa": {"type": "TEXT", "description": "Adresa completă a furnizorului"},
+    "tip_procedura": {"type": "VARCHAR(100)", "description": "Tipul procedurii (Cumparare directa)"},
+    "autoritate_contractanta": {"type": "VARCHAR(500)", "description": "Instituția publică care a făcut achiziția"},
+    "autoritate_contractanta_cui": {"type": "VARCHAR(50)", "description": "CUI-ul autorității contractante"},
+    "numar_anunt": {"type": "VARCHAR(50)", "description": "Numărul anunțului în SEAP (ex: DA20000005)"},
+    "data_anunt": {"type": "TIMESTAMP", "description": "Data publicării anunțului"},
+    "descriere": {"type": "TEXT", "description": "Descrierea produselor/serviciilor achiziționate"},
+    "tip_incheiere_contract": {"type": "VARCHAR(100)", "description": "Modalitatea de încheiere (Cumparare directa, Oferta)"},
+    "numar_contract": {"type": "VARCHAR(100)", "description": "Numărul contractului"},
+    "data_contract": {"type": "TIMESTAMP", "description": "Data semnării contractului"},
+    "titlu_contract": {"type": "TEXT", "description": "Titlul contractului"},
+    "valoare": {"type": "DECIMAL(18,2)", "description": "Valoarea în moneda originală"},
+    "moneda": {"type": "VARCHAR(10)", "description": "Moneda (RON, EUR, USD)"},
+    "valoare_ron": {"type": "DECIMAL(18,2)", "description": "Valoarea în RON"},
+    "valoare_eur": {"type": "DECIMAL(18,2)", "description": "Valoarea în EUR"},
+    "cpv_code_id": {"type": "INTEGER", "description": "ID intern pentru codul CPV"},
+    "cpv_code": {"type": "VARCHAR(50)", "description": "Codul CPV - clasificare europeană"}
+  },
+  "business_rules": {
+    "furnizor_mare": "Valoare totală contracte > 500.000 RON",
+    "contract_mare": "valoare_ron > 100.000",
+    "contract_mic": "valoare_ron < 10.000",
+    "autoritate_activa": "Mai mult de 20 contracte",
+    "furnizor_strain": "castigator_tara != 'Romania'",
+    "cautare_firma": "Folosește ILIKE cu % pentru potrivire parțială",
+    "top_n": "ORDER BY ... DESC LIMIT n",
+    "suma_totala": "SUM(valoare_ron) pentru agregări"
+  }
+}

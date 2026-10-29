@@ -1,6 +1,7 @@
 # Temă: Multi-Agent System
 
 Două sisteme:
+
 1. **Orchestrator + RAG** - caută în documente
 2. **Analyst + NL2SQL** - query-uri SQL
 
@@ -41,6 +42,7 @@ Două sisteme:
 ```
 
 **Flow:**
+
 1. Orchestrator apelează RAG Agent cu query
 2. RAG Agent caută și returnează chunks
 3. Orchestrator evaluează: "Pot răspunde?"
@@ -92,6 +94,7 @@ Două sisteme:
 ```
 
 **Flow Analyst:**
+
 1. `make_plan` - LLM generează plan cu QueryStep și ToolStep
 2. `execute_step` - execută fiecare pas:
    - QueryStep → apelează NL2SQL Agent → DataFrame în `slices[id]`
@@ -99,6 +102,7 @@ Două sisteme:
 3. `synthesize` - LLM generează răspuns din rezultate
 
 **Flow NL2SQL:**
+
 1. `get_context` - încarcă schema tabelului
 2. `generate_sql` - LLM generează SQL
 3. `validate_sql` - validează cu sqlparse
@@ -117,7 +121,7 @@ docker-compose up -d
 alembic upgrade head
 
 # Restaurează date (694k achiziții, 8k anunțuri, 135 chunks)
-docker exec -i exercise_orchestrator-postgres-1 pg_restore -U demo -d rag_demo --data-only < data/rag_demo.dump
+docker exec -i skillab-homework-3-postgres-1 pg_restore -U demo -d rag_demo --data-only < data/rag_demo.dump
 
 cp .env.example .env  # editează API key
 ```
@@ -149,6 +153,7 @@ cp .env.example .env  # editează API key
 ## De implementat
 
 ### 1. RAG Agent (`src/rag_agent.py`)
+
 ```python
 def node_refine(self, state: RAGAgentState) -> dict:
     """
@@ -164,6 +169,7 @@ def node_refine(self, state: RAGAgentState) -> dict:
 ```
 
 ### 2. Orchestrator (`src/orchestrator.py`)
+
 ```python
 def node_evaluate(self, state: OrchestratorState) -> dict:
     """
@@ -184,6 +190,7 @@ def node_answer(self, state: OrchestratorState) -> dict:
 ```
 
 ### 3. NL2SQL Agent (`src/nl2sql_agent.py`)
+
 ```python
 def node_generate_sql(self, state) -> dict:
     # Generează SQL din întrebare
@@ -196,6 +203,7 @@ def node_execute_sql(self, state) -> dict:
 ```
 
 ### 4. Analyst Agent (`src/analyst_agent.py`)
+
 ```python
 def node_make_plan(self, state) -> dict:
     # Creează plan cu QueryStep și ToolStep
@@ -205,6 +213,7 @@ def node_synthesize(self, state) -> dict:
 ```
 
 ### 5. Tools (`skillab-py/src/skillab/tools/implementations.py`)
+
 ```python
 @register_tool
 def join_data(params: JoinDataParams) -> pd.DataFrame:
@@ -218,12 +227,30 @@ def filter_data(params: FilterDataParams) -> pd.DataFrame:
 ## Plan format
 
 LLM generează plan JSON:
+
 ```json
 [
-  {"id": "q1", "action": "query", "table": "achizitii", "sub_question": "..."},
-  {"id": "q2", "action": "query", "table": "anunturi", "sub_question": "..."},
-  {"id": "joined", "action": "tool", "tool_name": "join_data", "input_steps": ["q1", "q2"], "params": {"left_key": "cui", "right_key": "cui"}},
-  {"id": "result", "action": "tool", "tool_name": "filter_data", "input_steps": ["joined"], "params": {"column": "valoare", "operator": ">", "value": "50000"}}
+  {
+    "id": "q1",
+    "action": "query",
+    "table": "achizitii",
+    "sub_question": "..."
+  },
+  { "id": "q2", "action": "query", "table": "anunturi", "sub_question": "..." },
+  {
+    "id": "joined",
+    "action": "tool",
+    "tool_name": "join_data",
+    "input_steps": ["q1", "q2"],
+    "params": { "left_key": "cui", "right_key": "cui" }
+  },
+  {
+    "id": "result",
+    "action": "tool",
+    "tool_name": "filter_data",
+    "input_steps": ["joined"],
+    "params": { "column": "valoare", "operator": ">", "value": "50000" }
+  }
 ]
 ```
 
@@ -231,7 +258,7 @@ Rezultate în `state.slices["q1"]`, `state.slices["joined"]`, etc.
 
 ## Hints
 
-```python
+````python
 # Render prompt
 prompt = self.prompts.render("rag_evaluate", query=q, context=ctx, ...)
 
@@ -251,7 +278,7 @@ with transaction() as session:
 
 # Tool catalog pentru prompt
 tools_catalog = ToolWrapper.to_prompt_string()
-```
+````
 
 ## Run
 
